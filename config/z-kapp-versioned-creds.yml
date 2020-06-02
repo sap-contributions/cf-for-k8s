@@ -1,6 +1,8 @@
 #@ load("@ytt:overlay", "overlay")
 
-#@overlay/match by=overlay.subset({"kind":"ConfigMap"}), expects="1+"
+#@ not_eirini_app_registry_secret = overlay.not_op(overlay.subset({"kind":"Secret", "metadata":{"name": "app-registry-credentials"}}))
+#@ configMap_and_secret_matcher = overlay.or_op(overlay.subset({"kind":"ConfigMap"}), overlay.subset({"kind":"Secret"}))
+#@overlay/match by=overlay.and_op(configMap_and_secret_matcher, not_eirini_app_registry_secret), expects="1+"
 #@overlay/match-child-defaults missing_ok=True
 ---
 metadata:
