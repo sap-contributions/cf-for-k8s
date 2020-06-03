@@ -1382,6 +1382,27 @@ jobs:
           echo "${DNS_DOMAIN}" > env-metadata/dns-domain.txt
           cp "/tmp/${cluster_name}.k8s-dev.relint.rocks/cf-vars.yaml" env-metadata
 
+  - task: push-test-app
+    config:
+      <<: *common-test-config
+      inputs:
+      - name: cf-for-k8s-latest-release
+      - name: env-metadata
+      run:
+        path: /bin/sh
+        args:
+        - -ec
+        - |
+          DNS_DOMAIN=$(cat env-metadata/dns-domain.txt)
+          cf api api.${DNS_DOMAIN} --skip-ssl-validation
+          cf auth admin "$(cat env-metadata/cf-admin-password.txt)"
+          cf create-org org
+          cf target -o org
+          cf create-space space
+          cf target -o org -s space
+
+          cf push jp-app -p cf-for-k8s-latest-release/tests/smoke/assets/test-node-app
+
   - task: install-cf-master
     input_mapping:
       pool-lock: ready-pool
@@ -1415,24 +1436,50 @@ jobs:
           echo "Installing CF..."
           kapp deploy -a cf -f <(ytt -f cf-for-k8s-master/config -f cf-install-values.yml) -y
 
-  - task: run-smoke-test
-    config:
-      <<: *common-test-config
-      inputs:
-      - name: cf-for-k8s-master
-      - name: env-metadata
-      run:
-        path: /bin/sh
-        args:
-        - -ec
-        - |
-          DNS_DOMAIN=$(cat env-metadata/dns-domain.txt)
-          export SMOKE_TEST_API_ENDPOINT="https://api.${DNS_DOMAIN}"
-          export SMOKE_TEST_APPS_DOMAIN="apps.${DNS_DOMAIN}"
-          export SMOKE_TEST_USERNAME=admin
-          export SMOKE_TEST_PASSWORD=$(cat env-metadata/cf-admin-password.txt)
-          export SMOKE_TEST_SKIP_SSL=true
-          cf-for-k8s-master/hack/run-smoke-tests.sh
+  - in_parallel:
+    - task: run-smoke-test
+      config:
+        <<: *common-test-config
+        inputs:
+        - name: cf-for-k8s-master
+        - name: env-metadata
+        run:
+          path: /bin/sh
+          args:
+          - -ec
+          - |
+            DNS_DOMAIN=$(cat env-metadata/dns-domain.txt)
+            export SMOKE_TEST_API_ENDPOINT="https://api.${DNS_DOMAIN}"
+            export SMOKE_TEST_APPS_DOMAIN="apps.${DNS_DOMAIN}"
+            export SMOKE_TEST_USERNAME=admin
+            export SMOKE_TEST_PASSWORD=$(cat env-metadata/cf-admin-password.txt)
+            export SMOKE_TEST_SKIP_SSL=true
+            cf-for-k8s-master/hack/run-smoke-tests.sh
+    - task: verify-existing-app
+      config:
+        <<: *common-test-config
+        inputs:
+        - name: cf-for-k8s-master
+        - name: env-metadata
+        run:
+          path: /bin/sh
+          args:
+          - -ec
+          - |
+            DNS_DOMAIN=$(cat env-metadata/dns-domain.txt)
+
+            #verify existing app still works
+            curl -k https://jp-app.apps.${DNS_DOMAIN}
+
+            cf api api.${DNS_DOMAIN} --skip-ssl-validation
+            cf auth admin "$(cat env-metadata/cf-admin-password.txt)"
+            cf create-org org
+            cf target -o org
+            cf create-space space
+            cf target -o org -s space
+            cf push jp-app -p cf-for-k8s-master/tests/smoke/assets/test-node-app
+
+            curl -k https://jp-app.apps.${DNS_DOMAIN}
 
   - task: delete-cf
     input_mapping:
