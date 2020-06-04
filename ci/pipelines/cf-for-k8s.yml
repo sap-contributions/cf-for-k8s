@@ -1381,6 +1381,7 @@ jobs:
           bosh interpolate --path /cf_admin_password cf-install-values.yml > env-metadata/cf-admin-password.txt
           echo "${DNS_DOMAIN}" > env-metadata/dns-domain.txt
           cp "/tmp/${cluster_name}.k8s-dev.relint.rocks/cf-vars.yaml" env-metadata
+          cp cf-install-values.yml env-metadata/original-cf-install-values.yml
 
   - task: push-test-app
     config:
@@ -1429,12 +1430,10 @@ jobs:
           echo "Copying bosh vars store from latest release install"
           mkdir -p "/tmp/${cluster_name}.k8s-dev.relint.rocks"
           cp env-metadata/cf-vars.yaml "/tmp/${cluster_name}.k8s-dev.relint.rocks/cf-vars.yaml"
-          echo "Generating install values..."
-          cf-for-k8s-master/hack/generate-values.sh --cf-domain "${DNS_DOMAIN}" --gcr-service-account-json gcp-service-account.json > cf-install-values.yml
-          echo "istio_static_ip: $(jq -r '.lb_static_ip' pool-lock/metadata)" >> cf-install-values.yml
+          echo "Using install values from the fresh install..."
 
           echo "Installing CF..."
-          kapp deploy -a cf -f <(ytt -f cf-for-k8s-master/config -f cf-install-values.yml) -y
+          kapp deploy -a cf -f <(ytt -f cf-for-k8s-master/config -f env-metadata/original-cf-install-values.yml) -y
 
   - in_parallel:
     - task: run-smoke-test
