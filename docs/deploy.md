@@ -140,7 +140,7 @@ This project is in it's early stages of development and hence there are features
 
       i. Render the final K8s template to raw K8s configuration
       ```console
-      ytt -f config -f /tmp/cf-values.yml > /tmp/cf-for-k8s-rendered.yml
+      ytt -f config -f values -f /tmp/cf-values.yml > /tmp/cf-for-k8s-rendered.yml
       ```
       > cf-for-k8s uses [ytt](https://github.com/k14s/ytt) to create and maintain reusable YAML templates. You can visit the ytt [playground](https://get-ytt.io/) to learn more about it's templating features. 
       > In the above command, `ytt` can take a folder e.g. `config` or file via `-f`. See all options by running `ytt help`.

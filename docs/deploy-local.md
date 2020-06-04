@@ -54,7 +54,7 @@ In addition to the Kubernetes version requirement in [Deploying CF for K8s](depl
      using the following commands:
 
      ```console
-     ytt -f config -f config-optional/remove-resource-requirements.yml -f config-optional/remove-ingressgateway-service.yml -f <cf_install_values_path> > /tmp/cf-for-k8s-rendered.yml
+     ytt -f config -f config-optional/remove-resource-requirements.yml -f config-optional/remove-ingressgateway-service.yml -f values -f <cf_install_values_path> > /tmp/cf-for-k8s-rendered.yml
      kapp deploy -a cf -f /tmp/cf-for-k8s-rendered.yml -y
      ```
 
@@ -98,7 +98,7 @@ In addition to the Kubernetes version requirement in [Deploying CF for K8s](depl
      using the following commands:
 
      ```console
-     ytt -f config -f config-optional/remove-resource-requirements.yml -f <cf_install_values_path> > /tmp/cf-for-k8s-rendered.yml
+     ytt -f config -f config-optional/remove-resource-requirements.yml -f values -f <cf_install_values_path> > /tmp/cf-for-k8s-rendered.yml
      kapp deploy -a cf -f /tmp/cf-for-k8s-rendered.yml -y
      ```
 

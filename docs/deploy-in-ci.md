@@ -17,7 +17,7 @@ The following scripts are designed to be executable in a CI system, as well as l
 - Install CF for K8s to your target K8s cluster.
 
   ```console
-  ytt -f config -f <path-to-cf-install-values-yaml> > /tmp/cf-for-k8s-rendered.yml
+  ytt -f config -f values -f <path-to-cf-install-values-yaml> > /tmp/cf-for-k8s-rendered.yml
   kapp deploy -a cf -f /tmp/cf-for-k8s-rendered.yml -y
   ```
 

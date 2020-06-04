@@ -29,7 +29,7 @@ kind delete cluster
 kind create cluster --config=deploy/kind/cluster.yml
 CF_VALUES=/tmp/cf-values.yml
 CF_RENDERED=/tmp/cf-rendered.yml
-ytt -f config -f config-optional/remove-ingressgateway-service.yml -f config-optional/remove-resource-requirements.yml -f $CF_VALUES > $CF_RENDERED
+ytt -f config -f config-optional/remove-ingressgateway-service.yml -f config-optional/remove-resource-requirements.yml -f values -f $CF_VALUES > $CF_RENDERED
 kapp deploy -f $CF_RENDERED -a cf -y
 kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.6/components.yaml
 retry 7 cf api api.vcap.me --skip-ssl-validation

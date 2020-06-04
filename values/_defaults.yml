@@ -25,11 +25,6 @@ cf_db:
 #! reserved static ip for istio LoadBalancer
 istio_static_ip: ""
 
-images:
-  capi: ""
-  nginx: ""
-  cfroutesync: ""
-
 system_certificate:
   #! Base64-encoded certificate for the wildcard
   #! subdomain of the system domain (e.g., CN=*.system.cf.example.com)
