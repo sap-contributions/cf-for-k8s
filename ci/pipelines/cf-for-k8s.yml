@@ -77,6 +77,16 @@ resources:
     paths:
       - ci/**
 
+- name: cf-for-k8s-wip-ci
+  type: git
+  icon: github-box
+  source:
+    branch: wip-172729791-upgrade-cf-for-k8s
+    uri: git@github.com:cloudfoundry/cf-for-k8s
+    private_key: ((cf_for_k8s_readonly_deploy_key.private_key))
+    paths:
+      - ci/**
+
 - name: cf-for-k8s-ci-dockerfile
   type: git
   icon: github-box
@@ -1384,25 +1394,9 @@ jobs:
           cp cf-install-values.yml env-metadata/original-cf-install-values.yml
 
   - task: push-test-app
-    config:
-      <<: *common-test-config
-      inputs:
-      - name: cf-for-k8s-latest-release
-      - name: env-metadata
-      run:
-        path: /bin/sh
-        args:
-        - -ec
-        - |
-          DNS_DOMAIN=$(cat env-metadata/dns-domain.txt)
-          cf api api.${DNS_DOMAIN} --skip-ssl-validation
-          cf auth admin "$(cat env-metadata/cf-admin-password.txt)"
-          cf create-org org
-          cf target -o org
-          cf create-space space
-          cf target -o org -s space
-
-          cf push jp-app -p cf-for-k8s-latest-release/tests/smoke/assets/test-node-app
+    file: cf-for-k8s-wip-ci/ci/tasks/push-test-app/task.yml
+    params:
+      APP_NAME: jp-node-app
 
   - task: install-cf-master
     input_mapping:
@@ -1436,24 +1430,9 @@ jobs:
           kapp deploy -a cf -f <(ytt -f cf-for-k8s-master/config -f env-metadata/original-cf-install-values.yml) -y
 
   - in_parallel:
-    - task: run-smoke-test
-      config:
-        <<: *common-test-config
-        inputs:
-        - name: cf-for-k8s-master
-        - name: env-metadata
-        run:
-          path: /bin/sh
-          args:
-          - -ec
-          - |
-            DNS_DOMAIN=$(cat env-metadata/dns-domain.txt)
-            export SMOKE_TEST_API_ENDPOINT="https://api.${DNS_DOMAIN}"
-            export SMOKE_TEST_APPS_DOMAIN="apps.${DNS_DOMAIN}"
-            export SMOKE_TEST_USERNAME=admin
-            export SMOKE_TEST_PASSWORD=$(cat env-metadata/cf-admin-password.txt)
-            export SMOKE_TEST_SKIP_SSL=true
-            cf-for-k8s-master/hack/run-smoke-tests.sh
+    - task: run-smoke-tests
+    file: cf-for-k8s-wip-ci/ci/tasks/run-smoke-tests/task.yml
+
     - task: verify-existing-app
       config:
         <<: *common-test-config
@@ -1468,7 +1447,7 @@ jobs:
             DNS_DOMAIN=$(cat env-metadata/dns-domain.txt)
 
             #verify existing app still works
-            curl -k https://jp-app.apps.${DNS_DOMAIN}
+            curl -k https://jp-node-app.apps.${DNS_DOMAIN}
 
             cf api api.${DNS_DOMAIN} --skip-ssl-validation
             cf auth admin "$(cat env-metadata/cf-admin-password.txt)"
@@ -1476,9 +1455,9 @@ jobs:
             cf target -o org
             cf create-space space
             cf target -o org -s space
-            cf push jp-app -p cf-for-k8s-master/tests/smoke/assets/test-node-app
+            cf push jp-node-app -p cf-for-k8s-master/tests/smoke/assets/test-node-app
 
-            curl -k https://jp-app.apps.${DNS_DOMAIN}
+            curl -k https://jp-node-app.apps.${DNS_DOMAIN}
 
   - task: delete-cf
     input_mapping:
