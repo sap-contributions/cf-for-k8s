@@ -77,16 +77,6 @@ resources:
     paths:
       - ci/**
 
-- name: cf-for-k8s-wip-ci
-  type: git
-  icon: github-box
-  source:
-    branch: wip-172729791-upgrade-cf-for-k8s
-    uri: git@github.com:cloudfoundry/cf-for-k8s
-    private_key: ((cf_for_k8s_readonly_deploy_key.private_key))
-    paths:
-      - ci/**
-
 - name: cf-for-k8s-ci-dockerfile
   type: git
   icon: github-box
@@ -1353,7 +1343,7 @@ jobs:
   - get: cf-for-k8s-latest-release
   - get: cf-for-k8s-master
     trigger: true
-  - get: cf-for-k8s-wip-ci
+  - get: cf-for-k8s-develop-ci
 
   - put: ready-pool
     params: {acquire: true}
@@ -1395,7 +1385,7 @@ jobs:
           cp cf-install-values.yml env-metadata/original-cf-install-values.yml
 
   - task: push-test-app
-    file: cf-for-k8s-wip-ci/ci/tasks/push-test-app/task.yml
+    file: cf-for-k8s-develop-ci/ci/tasks/push-test-app/task.yml
     params:
       APP_NAME: jp-node-app
 
@@ -1432,12 +1422,11 @@ jobs:
 
   - in_parallel:
     - task: run-smoke-tests
-      file: cf-for-k8s-wip-ci/ci/tasks/run-smoke-tests/task.yml
+      file: cf-for-k8s-develop-ci/ci/tasks/run-smoke-tests/task.yml
     - task: verify-existing-app
-      file: cf-for-k8s-wip-ci/ci/tasks/verify-existing-app/task.yml
+      file: cf-for-k8s-develop-ci/ci/tasks/verify-existing-app/task.yml
       params:
         APP_NAME: jp-node-app
-      
 
   - task: delete-cf
     input_mapping:

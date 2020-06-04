@@ -8,8 +8,8 @@ image_resource:
 
 inputs:
 - name: cf-for-k8s-master
-- name: cf-for-k8s-wip-ci
+- name: cf-for-k8s-develop-ci
 - name: env-metadata
 
 run:
-  path: cf-for-k8s-wip-ci/ci/tasks/run-smoke-tests/task.sh
+  path: cf-for-k8s-develop-ci/ci/tasks/run-smoke-tests/task.sh

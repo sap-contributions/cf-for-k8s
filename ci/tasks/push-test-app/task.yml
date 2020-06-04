@@ -8,11 +8,11 @@ image_resource:
 
 inputs:
 - name: cf-for-k8s-latest-release
-- name: cf-for-k8s-wip-ci
+- name: cf-for-k8s-develop-ci
 - name: env-metadata
 
 params:
   APP_NAME:
 
 run:
-  path: cf-for-k8s-wip-ci/ci/tasks/push-test-app/task.sh
+  path: cf-for-k8s-develop-ci/ci/tasks/push-test-app/task.sh
