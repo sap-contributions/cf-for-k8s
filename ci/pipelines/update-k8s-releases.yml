@@ -1,0 +1,77 @@
+---
+groups:
+- name: eirini
+  jobs:
+  - bump-eirini
+
+resources:
+- name: cf-for-k8s-develop
+  type: git
+  icon: github-box
+  source:
+    branch: develop
+    uri: git@github.com:cloudfoundry/cf-for-k8s
+    private_key: ((cf_for_k8s_readonly_deploy_key.private_key))
+    ignore_paths:
+      - ci/**
+
+- name: cf-for-k8s-develop-ci
+  type: git
+  icon: github-box
+  source:
+    branch: develop
+    uri: git@github.com:cloudfoundry/cf-for-k8s
+    private_key: ((cf_for_k8s_readonly_deploy_key.private_key))
+    paths:
+      - ci/**
+
+- name: eirini-release
+  type: github-release
+  source:
+    owner: cloudfoundry-incubator
+    repository: eirini-release
+    access_token: ((cf_deployment_release_bot_access_token))
+
+# Extract common platform and image_resource details so task configs can be more concise
+x-config: &common-task-config
+  platform: linux
+  image_resource:
+    type: docker-image
+    source:
+      repository: relintdockerhubpushbot/cf-for-k8s-ci
+
+jobs:
+- name: bump-eirini
+  public: true
+  plan:
+    - in_parallel:
+        - get: cf-for-k8s-develop-ci
+        - get: cf-for-k8s-develop
+        - get: eirini-release
+          trigger: true
+    - task: bump-eirini
+      config:
+        <<: *common-task-config
+        inputs:
+          - name: cf-for-k8s-develop
+          - name: eirini-release
+        outputs:
+          - name: cf-for-k8s-bump
+        run:
+          path: /bin/bash
+          args:
+            - -ec
+            - |
+              TAG=$(cat eirini-release/tag)
+              pushd cf-for-k8s-develop > /dev/null
+                CURR_TAG=$( yq ".directories[3].contents[0].githubRelease.tag" vendir.yml -r)
+                sed "s/tag: ${CURR_TAG}/tag: ${TAG}/g" vendir.yml > /tmp/vendir.yml && cp /tmp/vendir.yml vendir.yml
+                vendir sync
+              popd > /dev/null
+              cp -r cf-for-k8s-develop/* cf-for-k8s-bump/
+
+    - task: run-unit-tests
+      file: cf-for-k8s-develop-ci/ci/tasks/run-unit-tests/task.yml
+      input_mapping:
+        cf-for-k8s-ci: cf-for-k8s-develop-ci
+        cf-for-k8s-repo: cf-for-k8s-bump
