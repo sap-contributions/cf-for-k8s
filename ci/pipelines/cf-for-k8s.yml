@@ -1354,7 +1354,7 @@ jobs:
   - get: cf-for-k8s-latest-release
   - get: cf-for-k8s-master
     trigger: true
-  - get: cf-for-k8s-wip-ci
+  - get: cf-for-k8s-develop-ci
 
   - put: ready-pool
     params: {acquire: true}
@@ -1394,7 +1394,7 @@ jobs:
           cp "/tmp/${cluster_name}.k8s-dev.relint.rocks/cf-vars.yaml" env-metadata
 
   - task: push-test-app
-    file: cf-for-k8s-wip-ci/ci/tasks/push-test-app/task.yml
+    file: cf-for-k8s-develop-ci/ci/tasks/push-test-app/task.yml
     params:
       APP_NAME: jp-node-app
     input_mapping:
@@ -1436,9 +1436,9 @@ jobs:
 
   - in_parallel:
     - task: run-smoke-tests
-      file: cf-for-k8s-wip-ci/ci/tasks/run-smoke-tests/task.yml
+      file: cf-for-k8s-develop-ci/ci/tasks/run-smoke-tests/task.yml
     - task: verify-existing-app
-      file: cf-for-k8s-wip-ci/ci/tasks/verify-existing-app/task.yml
+      file: cf-for-k8s-develop-ci/ci/tasks/verify-existing-app/task.yml
       params:
         APP_NAME: jp-node-app
 
@@ -1521,6 +1521,7 @@ jobs:
       APP_NAME: jp-node-app
     input_mapping:
       cf-for-k8s-repo: cf-for-k8s-master
+      cf-for-k8s-develop-ci: cf-for-k8s-wip-ci
 
   - task: upgrade-cf-new-values
     input_mapping:
