@@ -17,7 +17,7 @@ groups:
   - redeploy-long-lived-env-with-latest-master
   - validate-azure
   - validate-cf-for-k8s-upgrade
-  - validate-values-rotation-upgrade-tmp
+  - validate-values-rotation-redeploy
 - name: pr-checks
   jobs:
   - fail-prs-to-cf-for-k8s-master
@@ -1460,7 +1460,7 @@ jobs:
     params:
       remove: ready-pool
 
-- name: validate-values-rotation-upgrade-tmp
+- name: validate-values-rotation-redeploy
   serial: true
   public: true
   plan:
