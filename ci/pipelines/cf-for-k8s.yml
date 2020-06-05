@@ -17,6 +17,7 @@ groups:
   - redeploy-long-lived-env-with-latest-master
   - validate-azure
   - validate-cf-for-k8s-upgrade
+  - validate-values-rotation-upgrade-tmp
 - name: pr-checks
   jobs:
   - fail-prs-to-cf-for-k8s-master
@@ -72,6 +73,16 @@ resources:
   icon: github-box
   source:
     branch: develop
+    uri: git@github.com:cloudfoundry/cf-for-k8s
+    private_key: ((cf_for_k8s_readonly_deploy_key.private_key))
+    paths:
+      - ci/**
+
+- name: cf-for-k8s-wip-ci
+  type: git
+  icon: github-box
+  source:
+    branch: jp-rotate-values-upgrade
     uri: git@github.com:cloudfoundry/cf-for-k8s
     private_key: ((cf_for_k8s_readonly_deploy_key.private_key))
     paths:
@@ -1343,7 +1354,7 @@ jobs:
   - get: cf-for-k8s-latest-release
   - get: cf-for-k8s-master
     trigger: true
-  - get: cf-for-k8s-develop-ci
+  - get: cf-for-k8s-wip-ci
 
   - put: ready-pool
     params: {acquire: true}
@@ -1370,7 +1381,6 @@ jobs:
           gcloud container clusters get-credentials "${cluster_name}" --zone '((ci_k8s_gcp_project_zone))' >/dev/null 2>&1
 
           DNS_DOMAIN="${cluster_name}.k8s-dev.relint.rocks"
-          cf-for-k8s-latest-release/hack/confirm-network-policy.sh "${cluster_name}" '((ci_k8s_gcp_project_zone))'
 
           echo "Generating install values..."
           cf-for-k8s-latest-release/hack/generate-values.sh --cf-domain "${DNS_DOMAIN}" --gcr-service-account-json gcp-service-account.json > cf-install-values.yml
@@ -1382,12 +1392,13 @@ jobs:
           bosh interpolate --path /cf_admin_password cf-install-values.yml > env-metadata/cf-admin-password.txt
           echo "${DNS_DOMAIN}" > env-metadata/dns-domain.txt
           cp "/tmp/${cluster_name}.k8s-dev.relint.rocks/cf-vars.yaml" env-metadata
-          cp cf-install-values.yml env-metadata/original-cf-install-values.yml
 
   - task: push-test-app
-    file: cf-for-k8s-develop-ci/ci/tasks/push-test-app/task.yml
+    file: cf-for-k8s-wip-ci/ci/tasks/push-test-app/task.yml
     params:
       APP_NAME: jp-node-app
+    input_mapping:
+      cf-for-k8s-repo: cf-for-k8s-latest-release
 
   - task: install-cf-master
     input_mapping:
@@ -1415,16 +1426,19 @@ jobs:
           echo "Copying bosh vars store from latest release install"
           mkdir -p "/tmp/${cluster_name}.k8s-dev.relint.rocks"
           cp env-metadata/cf-vars.yaml "/tmp/${cluster_name}.k8s-dev.relint.rocks/cf-vars.yaml"
-          echo "Using install values from the fresh install..."
+
+          echo "Generating install values using the same cf-vars file from fresh install..."
+          cf-for-k8s-master/hack/generate-values.sh --cf-domain "${DNS_DOMAIN}" --gcr-service-account-json gcp-service-account.json > cf-install-values.yml
+          echo "istio_static_ip: $(jq -r '.lb_static_ip' pool-lock/metadata)" >> cf-install-values.yml
 
           echo "Installing CF..."
-          kapp deploy -a cf -f <(ytt -f cf-for-k8s-master/config -f env-metadata/original-cf-install-values.yml) -y
+          kapp deploy -a cf -f <(ytt -f cf-for-k8s-master/config -f cf-install-values.yml) -y
 
   - in_parallel:
     - task: run-smoke-tests
-      file: cf-for-k8s-develop-ci/ci/tasks/run-smoke-tests/task.yml
+      file: cf-for-k8s-wip-ci/ci/tasks/run-smoke-tests/task.yml
     - task: verify-existing-app
-      file: cf-for-k8s-develop-ci/ci/tasks/verify-existing-app/task.yml
+      file: cf-for-k8s-wip-ci/ci/tasks/verify-existing-app/task.yml
       params:
         APP_NAME: jp-node-app
 
@@ -1455,6 +1469,127 @@ jobs:
   - put: ready-pool
     params:
       remove: ready-pool
+
+- name: validate-values-rotation-upgrade-tmp
+  serial: true
+  public: true
+  plan:
+  - get: cf-for-k8s-master
+  - get: cf-for-k8s-wip-ci
+  - get: weekday-pm
+    trigger: true
+
+  - put: ready-pool
+    params: {acquire: true}
+
+  - task: fresh-install-cf
+    input_mapping:
+      pool-lock: ready-pool
+    config:
+      <<: *common-task-config
+      inputs:
+      - name: cf-for-k8s-master
+      - name: pool-lock
+      outputs:
+      - name: env-metadata
+      run:
+        path: /bin/bash
+        args:
+        - -ec
+        - |
+          export KUBECONFIG=kube-config.yml
+          cluster_name=$(cat pool-lock/name)
+          echo '((ci_k8s_gcp_service_account_json))' > gcp-service-account.json
+          gcloud auth activate-service-account --key-file=gcp-service-account.json --project='((ci_k8s_gcp_project_name))' >/dev/null 2>&1
+          gcloud container clusters get-credentials "${cluster_name}" --zone '((ci_k8s_gcp_project_zone))' >/dev/null 2>&1
+
+          DNS_DOMAIN="${cluster_name}.k8s-dev.relint.rocks"
+
+          echo "Generating install values..."
+          cf-for-k8s-master/hack/generate-values.sh --cf-domain "${DNS_DOMAIN}" --gcr-service-account-json gcp-service-account.json > cf-install-values.yml
+          echo "istio_static_ip: $(jq -r '.lb_static_ip' pool-lock/metadata)" >> cf-install-values.yml
+
+          echo "Installing CF..."
+          kapp deploy -a cf -f <(ytt -f cf-for-k8s-master/config -f cf-install-values.yml) -y
+
+          bosh interpolate --path /cf_admin_password cf-install-values.yml > env-metadata/cf-admin-password.txt
+          echo "${DNS_DOMAIN}" > env-metadata/dns-domain.txt
+
+  - task: push-test-app
+    file: cf-for-k8s-wip-ci/ci/tasks/push-test-app/task.yml
+    params:
+      APP_NAME: jp-node-app
+    input_mapping:
+      cf-for-k8s-repo: cf-for-k8s-master
+
+  - task: upgrade-cf-new-values
+    input_mapping:
+      pool-lock: ready-pool
+    config:
+      <<: *common-task-config
+      inputs:
+      - name: cf-for-k8s-master
+      - name: pool-lock
+      - name: env-metadata
+      run:
+        path: /bin/bash
+        args:
+        - -ec
+        - |
+          export KUBECONFIG=kube-config.yml
+          cluster_name=$(cat pool-lock/name)
+          echo '((ci_k8s_gcp_service_account_json))' > gcp-service-account.json
+          gcloud auth activate-service-account --key-file=gcp-service-account.json --project='((ci_k8s_gcp_project_name))' >/dev/null 2>&1
+          gcloud container clusters get-credentials "${cluster_name}" --zone '((ci_k8s_gcp_project_zone))' >/dev/null 2>&1
+
+          DNS_DOMAIN=$(cat env-metadata/dns-domain.txt)
+
+          echo "Generating new install values..."
+          cf-for-k8s-master/hack/generate-values.sh --cf-domain "${DNS_DOMAIN}" --gcr-service-account-json gcp-service-account.json > cf-install-values-new.yml
+          echo "istio_static_ip: $(jq -r '.lb_static_ip' pool-lock/metadata)" >> cf-install-values-new.yml
+
+
+          echo "Installing CF..."
+          kapp deploy -a cf -f <(ytt -f cf-for-k8s-master/config -f cf-install-values-new.yml) -y
+
+          bosh interpolate --path /cf_admin_password cf-install-values.yml > env-metadata/cf-admin-password.txt
+
+  - in_parallel:
+    - task: run-smoke-tests
+      file: cf-for-k8s-wip-ci/ci/tasks/run-smoke-tests/task.yml
+    - task: verify-existing-app
+      file: cf-for-k8s-wip-ci/ci/tasks/verify-existing-app/task.yml
+      params:
+        APP_NAME: jp-node-app
+
+  - task: delete-cf
+    input_mapping:
+      pool-lock: ready-pool
+    config:
+      <<: *common-task-config
+      inputs:
+      - name: pool-lock
+      run:
+        path: /bin/bash
+        args:
+        - -ec
+        - |
+          cluster_name=$(cat pool-lock/name)
+          export KUBECONFIG=kube-config.yml
+          echo '((ci_k8s_gcp_service_account_json))' > gcp-service-account.json
+          gcloud auth activate-service-account --key-file=gcp-service-account.json --project='((ci_k8s_gcp_project_name))' >/dev/null 2>&1
+          gcloud container clusters get-credentials "${cluster_name}" --zone '((ci_k8s_gcp_project_zone))' >/dev/null 2>&1
+
+          kapp delete -a cf --yes
+
+  - put: destroy-pool
+    params:
+      add: ready-pool
+
+  - put: ready-pool
+    params:
+      remove: ready-pool
+
 - name: add-stability-cluster-lock
   serial: true
   public: true
