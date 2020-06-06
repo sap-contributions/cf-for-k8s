@@ -7,7 +7,6 @@ if ${VERIFY_EXISTING_APP}; then
     echo "Confirmed that existing app is still available"
 fi
 
-DNS_DOMAIN=$(cat env-metadata/dns-domain.txt)
 cf api api.${DNS_DOMAIN} --skip-ssl-validation
 cf auth admin "$(cat env-metadata/cf-admin-password.txt)"
 cf create-org org

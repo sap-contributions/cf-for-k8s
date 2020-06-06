@@ -21,7 +21,7 @@ resources:
   type: git
   icon: github-box
   source:
-    branch: after-hours-clusters
+    branch: develop
     uri: git@github.com:cloudfoundry/cf-for-k8s
     private_key: ((cf_for_k8s_readonly_deploy_key.private_key))
     paths:
@@ -145,11 +145,28 @@ resources:
     url: ((relint_slack_incoming_webhook))
 
 jobs:
-- name: check-pool-size-tmp
+- name: check-pool-size
   plan:
   - get: cf-for-k8s-develop-ci
   - get: every-5-minutes
     trigger: true
+  - get: pool-repo
+  - try:
+      task: check-pool-size
+      file: cf-for-k8s-develop-ci/ci/tasks/check-pool-size/task.yml
+      params:
+        POOL_SIZE_BUFFER_TARGET: 2
+      on_failure: # Build a new env
+        do:
+        # Add an entry to the building/unclaimed pool and give it a cool name
+        - task: generate-random-name
+          file: cf-for-k8s-develop-ci/ci/tasks/generate-random-name/task.yml
+        - put: building-pool
+          params: {add: new-lock}
+
+- name: check-pool-size-after-hours
+  plan:
+  - get: cf-for-k8s-develop-ci
   - get: every-5-minutes-off-hours
     trigger: true
   - get: every-5-minutes-weekends
@@ -159,7 +176,7 @@ jobs:
       task: check-pool-size
       file: cf-for-k8s-develop-ci/ci/tasks/check-pool-size/task.yml
       params:
-        POOL_SIZE_BUFFER_TARGET: 2
+        POOL_SIZE_BUFFER_TARGET: 1
       on_failure: # Build a new env
         do:
         # Add an entry to the building/unclaimed pool and give it a cool name
