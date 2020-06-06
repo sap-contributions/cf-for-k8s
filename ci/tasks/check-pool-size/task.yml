@@ -8,6 +8,7 @@ image_resource:
 
 inputs:
 - name: pool-repo
+- name: cf-for-k8s-develop-ci
 
 params:
   POOL_SIZE_BUFFER_TARGET:

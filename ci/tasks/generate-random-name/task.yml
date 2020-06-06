@@ -8,6 +8,7 @@ image_resource:
 
 inputs:
 - name: pool-repo
+- name: cf-for-k8s-develop-ci
 outputs:
 - name: new-lock
 

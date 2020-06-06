@@ -21,7 +21,7 @@ resources:
   type: git
   icon: github-box
   source:
-    branch: develop
+    branch: after-hours-clusters
     uri: git@github.com:cloudfoundry/cf-for-k8s
     private_key: ((cf_for_k8s_readonly_deploy_key.private_key))
     paths:
@@ -145,10 +145,14 @@ resources:
     url: ((relint_slack_incoming_webhook))
 
 jobs:
-- name: check-pool-size
+- name: check-pool-size-tmp
   plan:
   - get: cf-for-k8s-develop-ci
   - get: every-5-minutes
+    trigger: true
+  - get: every-5-minutes-off-hours
+    trigger: true
+  - get: every-5-minutes-weekends
     trigger: true
   - get: pool-repo
   - try:
