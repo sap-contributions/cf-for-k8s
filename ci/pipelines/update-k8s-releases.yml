@@ -106,7 +106,7 @@ jobs:
     - task: install-cf
       file: cf-for-k8s-develop-ci/ci/tasks/install-cf-on-gke/task.yml
       input_mapping:
-        cf-for-k8s-latest-candidate: cf-for-k8s-bump
+        cf-for-k8s-candidate: cf-for-k8s-bump
         pool-lock: ready-pool
 
     - task: run-smoke-tests

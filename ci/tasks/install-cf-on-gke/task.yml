@@ -7,16 +7,17 @@ image_resource:
     repository: relintdockerhubpushbot/cf-for-k8s-ci
 
 inputs:
-  - name: cf-for-k8s-latest-candidate
+  - name: cf-for-k8s-ci
+  - name: cf-for-k8s-candidate
   - name: pool-lock
 
 params:
-  - GCP_SERVICE_ACCOUNT_JSON:
-  - GCP_PROJECT_NAME:
-  - GCP_PROJECT_ZONE:
+  GCP_SERVICE_ACCOUNT_JSON:
+  GCP_PROJECT_NAME:
+  GCP_PROJECT_ZONE:
 
 outputs:
   - name: env-metadata
 
 run:
-  path: /cf-for-k8s-ci/ci/tasks/install-cf-on-gke/task.sh
+  path: cf-for-k8s-ci/ci/tasks/install-cf-on-gke/task.sh
