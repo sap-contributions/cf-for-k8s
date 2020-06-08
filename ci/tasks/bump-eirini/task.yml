@@ -9,9 +9,12 @@ image_resource:
 inputs:
   - name: cf-for-k8s-develop
   - name: eirini-release
+  - name: env-metadata
+    optional: true
 
 outputs:
   - name: cf-for-k8s-bump
+  - name: env-metadata
 
 run:
   path: cf-for-k8s-ci/ci/tasks/bump-eirini/task.sh
