@@ -10,11 +10,14 @@ inputs:
   - name: cf-for-k8s-ci
   - name: cf-for-k8s-candidate
   - name: pool-lock
+  - name: env-metadata
+    optional: true
 
 params:
   GCP_SERVICE_ACCOUNT_JSON:
   GCP_PROJECT_NAME:
   GCP_PROJECT_ZONE:
+  UPGRADE: false
 
 outputs:
   - name: env-metadata
