@@ -113,3 +113,11 @@ jobs:
       file: cf-for-k8s-develop-ci/ci/tasks/run-smoke-tests/task.yml
       input_mapping:
         cf-for-k8s-master: cf-for-k8s-bump
+
+    - put: destroy-pool
+      params:
+        add: ready-pool
+
+    - put: ready-pool
+      params:
+        remove: ready-pool
