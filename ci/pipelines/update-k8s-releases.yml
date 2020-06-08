@@ -32,6 +32,15 @@ resources:
     repository: eirini-release
     access_token: ((cf_deployment_release_bot_access_token))
 
+- name: ready-pool
+  type: pool
+  icon: pool
+  source:
+    uri: git@github.com:cloudfoundry/relint-ci-pools
+    branch: master
+    pool: k8s-dev/ready
+    private_key: ((relint_ci_pools_readwrite_deploy_key.private_key))
+
 # Extract common platform and image_resource details so task configs can be more concise
 x-config: &common-task-config
   platform: linux
@@ -49,6 +58,9 @@ jobs:
         - get: cf-for-k8s-develop
         - get: eirini-release
           trigger: true
+        - put: ready-pool
+          params: {acquire: true}
+
     - task: bump-eirini
       config:
         <<: *common-task-config
@@ -84,8 +96,20 @@ jobs:
               popd > /dev/null
               cp -r cf-for-k8s-develop/* cf-for-k8s-bump/
 
+
     - task: run-unit-tests
       file: cf-for-k8s-develop-ci/ci/tasks/run-unit-tests/task.yml
       input_mapping:
         cf-for-k8s-ci: cf-for-k8s-develop-ci
         cf-for-k8s-repo: cf-for-k8s-bump
+
+    - task: install-cf
+      file: cf-for-k8s-develop-ci/ci/tasks/install-cf-on-gke/task.yml
+      input_mapping:
+        cf-for-k8s-latest-candidate: cf-for-k8s-bump
+        pool-lock: ready-pool
+
+    - task: run-smoke-tests
+      file: cf-for-k8s-develop-ci/ci/tasks/run-smoke-tests/task.yml
+      input_mapping:
+        cf-for-k8s-master: cf-for-k8s-bump
