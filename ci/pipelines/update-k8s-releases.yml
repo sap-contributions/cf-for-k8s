@@ -13,7 +13,7 @@ resources:
   source:
     branch: wip-bump-eirini-171631154
     uri: git@github.com:cloudfoundry/cf-for-k8s
-    private_key: ((cf_for_k8s_readonly_deploy_key.private_key))
+    private_key: ((cf_for_k8s_readwrite_deploy_key.private_key))
     ignore_paths:
       - ci/**
 
@@ -209,6 +209,7 @@ jobs:
         <<: *common-task-config
         inputs:
           - name: cf-for-k8s-candidate
+          - name: eirini-release
         run:
           path: /bin/bash
           args:
@@ -216,8 +217,13 @@ jobs:
             - |
               TAG=$(cat eirini-release/tag)
               pushd cf-for-k8s-candidate > /dev/null
+                git config user.email "cf-release-integration@pivotal.io"
+                git config user.name "relint-ci"
                 git add .
                 git commit -m"Bump eirini to ${TAG}"
-                git push origin head
               popd
 
+    - put: cf-for-k8s-develop
+      params:
+        repository: cf-for-k8s-bump
+        rebase: true
