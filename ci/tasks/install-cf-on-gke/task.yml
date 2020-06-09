@@ -8,7 +8,7 @@ image_resource:
 
 inputs:
   - name: cf-for-k8s-ci
-  - name: cf-for-k8s-candidate
+  - name: cf-for-k8s-repo
   - name: pool-lock
   - name: env-metadata
     optional: true
