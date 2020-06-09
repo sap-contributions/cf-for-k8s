@@ -1,4 +1,4 @@
-#!/bin/bash -eux
+#!/bin/bash -eu
 
 export KUBECONFIG=kube-config.yml
 cluster_name=$(cat pool-lock/name)

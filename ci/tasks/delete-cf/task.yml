@@ -19,4 +19,4 @@ outputs:
   - name: env-metadata
 
 run:
-  path: cf-for-k8s-ci/ci/tasks/install-cf-on-gke/task.sh
+  path: cf-for-k8s-ci/ci/tasks/delete-cf/task.sh
