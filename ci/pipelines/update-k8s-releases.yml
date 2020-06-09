@@ -134,11 +134,12 @@ jobs:
           input_mapping:
             cf-for-k8s-repo: cf-for-k8s-bump
         - task: verify-existing-app
-          file: cf-for-k8s-ci/ci/tasks/verify-existing-app/task.yml
+          file: cf-for-k8s-ci/ci/tasks/push-test-app/task.yml
           input_mapping:
             cf-for-k8s-master: cf-for-k8s-bump
           params:
             APP_NAME: my-node-app
+            VERIFY_EXISTING_APP: true
 
     # bring back after #173235596 is resolved in cf-for-k8s
     # - task: delete-cf
