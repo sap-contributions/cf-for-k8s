@@ -113,7 +113,7 @@ jobs:
     - task: push-test-app
       file: cf-for-k8s-ci/ci/tasks/push-test-app/task.yml
       input_mapping:
-        cf-for-k8s-latest-release: cf-for-k8s-develop
+        cf-for-k8s-repo: cf-for-k8s-develop
       params:
         APP_NAME: my-node-app
 
