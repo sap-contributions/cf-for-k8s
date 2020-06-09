@@ -30,4 +30,4 @@ EOT
 
 popd > /dev/null
 
-cp -r cf-for-k8s-develop/* cf-for-k8s-bump/
+cp -r cf-for-k8s-develop/. cf-for-k8s-bump
