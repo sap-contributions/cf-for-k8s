@@ -14,5 +14,8 @@ inputs:
 outputs:
   - name: cf-for-k8s-bump
 
+param:
+  VENDIR_GITHUB_API_TOKEN:
+
 run:
   path: cf-for-k8s-ci/ci/tasks/bump-eirini/task.sh
