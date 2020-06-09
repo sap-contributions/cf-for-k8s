@@ -1,11 +1,4 @@
 ---
-groups:
-- name: eirini
-  jobs:
-  - bump-eirini-fresh-install
-  - bump-eirini-upgrade
-  - promote-to-develop
-
 resources:
 - name: cf-for-k8s-develop
   type: git
@@ -17,16 +10,7 @@ resources:
     ignore_paths:
       - ci/**
 
-- name: cf-for-k8s-master
-  type: git
-  icon: github-box
-  source:
-    tag_filter: v*
-    branch: master
-    uri: git@github.com:cloudfoundry/cf-for-k8s
-    private_key: ((cf_for_k8s_readonly_deploy_key.private_key))
-
-- name: cf-for-k8s-develop-ci
+- name: cf-for-k8s-ci
   type: git
   icon: github-box
   source:
@@ -70,42 +54,29 @@ x-config: &common-task-config
       repository: relintdockerhubpushbot/cf-for-k8s-ci
 
 jobs:
-- name: bump-eirini-fresh-install
+- name: bump-eirini
   public: true
-  ensure:
-    do:
-      - put: destroy-pool
-        params:
-          add: ready-pool
-
-      - put: ready-pool
-        params:
-          remove: ready-pool
 
   plan:
     - in_parallel:
-        - get: cf-for-k8s-develop-ci
+        - get: cf-for-k8s-ci
         - get: cf-for-k8s-develop
         - get: eirini-release
           trigger: true
         - put: ready-pool
           params: {acquire: true}
 
-    - task: bump-eirini
-      file: cf-for-k8s-develop-ci/ci/tasks/bump-eirini/task.yml
-      input_mapping:
-        cf-for-k8s-ci: cf-for-k8s-develop-ci
+    - task: bump-eirini-onto-develop
+      file: cf-for-k8s-ci/ci/tasks/bump-eirini/task.yml
 
     - task: run-unit-tests
-      file: cf-for-k8s-develop-ci/ci/tasks/run-unit-tests/task.yml
+      file: cf-for-k8s-ci/ci/tasks/run-unit-tests/task.yml
       input_mapping:
-        cf-for-k8s-ci: cf-for-k8s-develop-ci
         cf-for-k8s-repo: cf-for-k8s-bump
 
-    - task: install-cf
-      file: cf-for-k8s-develop-ci/ci/tasks/install-cf-on-gke/task.yml
+    - task: fresh-install-cf
+      file: cf-for-k8s-ci/ci/tasks/install-cf-on-gke/task.yml
       input_mapping:
-        cf-for-k8s-ci: cf-for-k8s-develop-ci
         cf-for-k8s-candidate: cf-for-k8s-bump
         pool-lock: ready-pool
       params:
@@ -114,29 +85,23 @@ jobs:
         GCP_PROJECT_ZONE: ((ci_k8s_gcp_project_zone))
 
     - task: run-smoke-tests
-      file: cf-for-k8s-develop-ci/ci/tasks/run-smoke-tests/task.yml
+      file: cf-for-k8s-ci/ci/tasks/run-smoke-tests/task.yml
       input_mapping:
-        cf-for-k8s-ci: cf-for-k8s-develop-ci
         cf-for-k8s-master: cf-for-k8s-bump
 
-- name: bump-eirini-upgrade
-  serial: true
-  public: true
-  plan:
-    - get: cf-for-k8s-master
-    - get: cf-for-k8s-develop
-    - get: cf-for-k8s-develop-ci
-    - get: eirini-release
-      trigger: true
-
-    - put: ready-pool
-      params: {acquire: true}
-
-    - task: install-cf-latest
-      file: cf-for-k8s-develop-ci/ci/tasks/install-cf-on-gke/task.yml
+    - task: delete-cf
+      file: cf-for-k8s-ci/ci/tasks/delete-cf/task.yml
+      params:
+        GCP_SERVICE_ACCOUNT_JSON: ((ci_k8s_gcp_service_account_json))
+        GCP_PROJECT_NAME: ((ci_k8s_gcp_project_name))
+        GCP_PROJECT_ZONE: ((ci_k8s_gcp_project_zone))
       input_mapping:
-        cf-for-k8s-ci: cf-for-k8s-develop-ci
-        cf-for-k8s-candidate: cf-for-k8s-master
+        pool-lock: ready-pool
+
+    - task: first-install-cf-develop
+      file: cf-for-k8s-ci/ci/tasks/install-cf-on-gke/task.yml
+      input_mapping:
+        cf-for-k8s-candidate: cf-for-k8s-develop
         pool-lock: ready-pool
       params:
         GCP_SERVICE_ACCOUNT_JSON: ((ci_k8s_gcp_service_account_json))
@@ -144,22 +109,15 @@ jobs:
         GCP_PROJECT_ZONE: ((ci_k8s_gcp_project_zone))
 
     - task: push-test-app
-      file: cf-for-k8s-develop-ci/ci/tasks/push-test-app/task.yml
+      file: cf-for-k8s-ci/ci/tasks/push-test-app/task.yml
       input_mapping:
-        cf-for-k8s-develop-ci: cf-for-k8s-develop-ci
-        cf-for-k8s-latest-release: cf-for-k8s-master
+        cf-for-k8s-latest-release: cf-for-k8s-develop
       params:
-        APP_NAME: jp-node-app
+        APP_NAME: my-node-app
 
-    - task: bump-eirini
-      file: cf-for-k8s-develop-ci/ci/tasks/bump-eirini/task.yml
+    - task: upgrade-cf-with-eirini-bump
+      file: cf-for-k8s-ci/ci/tasks/install-cf-on-gke/task.yml
       input_mapping:
-        cf-for-k8s-ci: cf-for-k8s-develop-ci
-
-    - task: upgrade-cf-bumped
-      file: cf-for-k8s-develop-ci/ci/tasks/install-cf-on-gke/task.yml
-      input_mapping:
-        cf-for-k8s-ci: cf-for-k8s-develop-ci
         cf-for-k8s-candidate: cf-for-k8s-bump
         pool-lock: ready-pool
       params:
@@ -170,60 +128,36 @@ jobs:
 
     - in_parallel:
         - task: run-smoke-tests
-          file: cf-for-k8s-develop-ci/ci/tasks/run-smoke-tests/task.yml
+          file: cf-for-k8s-ci/ci/tasks/run-smoke-tests/task.yml
           input_mapping:
             cf-for-k8s-master: cf-for-k8s-bump
         - task: verify-existing-app
-          file: cf-for-k8s-develop-ci/ci/tasks/verify-existing-app/task.yml
+          file: cf-for-k8s-ci/ci/tasks/verify-existing-app/task.yml
           input_mapping:
             cf-for-k8s-master: cf-for-k8s-bump
           params:
-            APP_NAME: jp-node-app
+            APP_NAME: my-node-app
 
-    - put: destroy-pool
+    - task: delete-cf
+      file: cf-for-k8s-ci/ci/tasks/delete-cf/task.yml
       params:
-        add: ready-pool
-
-    - put: ready-pool
-      params:
-        remove: ready-pool
-
-- name: promote-to-develop
-  public: true
-  plan:
-    - in_parallel:
-      - get: cf-for-k8s-develop-ci
-      - get: cf-for-k8s-develop
-      - get: eirini-release
-        passed:
-          - bump-eirini-fresh-install
-          - bump-eirini-upgrade
-
-    - task: bump-eirini
-      file: cf-for-k8s-develop-ci/ci/tasks/bump-eirini/task.yml
-
-    - task: commit-bump
+        GCP_SERVICE_ACCOUNT_JSON: ((ci_k8s_gcp_service_account_json))
+        GCP_PROJECT_NAME: ((ci_k8s_gcp_project_name))
+        GCP_PROJECT_ZONE: ((ci_k8s_gcp_project_zone))
       input_mapping:
-        cf-for-k8s-candidate: cf-for-k8s-bump
-      config:
-        <<: *common-task-config
-        inputs:
-          - name: cf-for-k8s-candidate
-          - name: eirini-release
-        run:
-          path: /bin/bash
-          args:
-            - -ec
-            - |
-              TAG=$(cat eirini-release/tag)
-              pushd cf-for-k8s-candidate > /dev/null
-                git config user.email "cf-release-integration@pivotal.io"
-                git config user.name "relint-ci"
-                git add .
-                git commit -m"Bump eirini to ${TAG}"
-              popd
+        pool-lock: ready-pool
 
     - put: cf-for-k8s-develop
       params:
         repository: cf-for-k8s-bump
         rebase: true
+
+  ensure:
+    do:
+      - put: destroy-pool
+        params:
+          add: ready-pool
+
+      - put: ready-pool
+        params:
+          remove: ready-pool
