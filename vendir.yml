@@ -1,3 +1,4 @@
+---
 apiVersion: vendir.k14s.io/v1alpha1
 kind: Config
 minimumRequiredVersion: 0.8.0
@@ -46,6 +47,8 @@ directories:
       disableAutoChecksumValidation: true
     includePaths:
     - release-0.0.8.yaml
+# the components in this section below are handled by their corresponding build scripts
+# the manual param tells vendir to not override/touch the contents of these config/_ytt_lib/<eirini|minio|postgres> directories
   - path: eirini
     manual: {}
   - path: minio
@@ -54,6 +57,7 @@ directories:
     manual: {}
   - path: postgres
     manual: {}
+
 - path: build/metacontroller/_vendir
   contents:
   - path: .
@@ -62,14 +66,22 @@ directories:
       ref: v0.4.0
     includePaths:
     - manifests/*
+
+# When adding a helm chart to our set of components:
+# 1. Find the chart you need from https://hub.helm.sh/charts/stable
+# 2. Note the latest (or desired) version from the "Chart Versions" section on the right.
+# 3. Navigate to the corresponding directory of https://github.com/helm/charts/tree/master/stable or related repo
+# 4. Look at the history or blame log of the Chart.yaml file to find when the version was bumped to the version you found earlier.
+# 5. The SHA of the commit that bumped the version will be the SHA you use as the 'ref' of the git section below.
 - path: build/minio/_vendir
   contents:
   - path: .
     git:
       url: https://github.com/helm/charts
-      ref: f8d1e522df1e4841e7a4a1a46d59bce9a9bad904
+      ref: f8d1e522df1e4841e7a4a1a46d59bce9a9bad904 # version: 5.0.22
     includePaths:
     - stable/minio/**/*
+
 - path: build/eirini/_vendir
   contents:
   - path: .
@@ -84,6 +96,6 @@ directories:
   - path: .
     git:
       url: https://github.com/bitnami/charts
-      ref: 1765929fa8cf37819309ff975ebf0a8dfcf7824d
+      ref: 1765929fa8cf37819309ff975ebf0a8dfcf7824d # version: 8.9.0
     includePaths:
     - bitnami/postgresql/**/*
