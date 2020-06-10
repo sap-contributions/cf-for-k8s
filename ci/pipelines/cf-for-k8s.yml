@@ -1424,9 +1424,11 @@ jobs:
 
   - in_parallel:
     - task: run-smoke-tests
-      file: cf-for-k8s-develop-ci/ci/tasks/run-smoke-tests/task.yml
+      file: cf-for-k8s-ci/ci/tasks/run-smoke-tests/task.yml
+      input_mapping:
+        cf-for-k8s-repo: cf-for-k8s-master
     - task: verify-existing-app
-      file: cf-for-k8s-develop-ci/ci/tasks/push-test-app/task.yml
+      file: cf-for-k8s-ci/ci/tasks/push-test-app/task.yml
       params:
         APP_NAME: jp-node-app
         VERIFY_EXISTING_APP: true
@@ -1466,7 +1468,7 @@ jobs:
   public: true
   plan:
   - get: cf-for-k8s-master
-  - get: cf-for-k8s-develop-ci
+  - get: cf-for-k8s-ci
   - get: weekday-pm
     trigger: true
 
@@ -1508,7 +1510,7 @@ jobs:
           grep -E "db_admin_password|capi_db_password|uaa_db_password|blobstore_secret_key" "/tmp/${cluster_name}.k8s-dev.relint.rocks/cf-vars.yaml" > env-metadata/cf-vars.yaml
 
   - task: push-test-app
-    file: cf-for-k8s-develop-ci/ci/tasks/push-test-app/task.yml
+    file: cf-for-k8s-ci/ci/tasks/push-test-app/task.yml
     params:
       APP_NAME: jp-node-app
       VERIFY_EXISTING_APP: false
