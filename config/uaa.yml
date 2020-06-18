@@ -49,6 +49,8 @@ database:
 ca_certs:
   -  #@ data.values.uaa.database.ca_cert
 
+automountServiceAccountToken: #@ data.values.automountServiceAccountToken
+
 namespace: #@ data.values.system_namespace
 
 jwt:

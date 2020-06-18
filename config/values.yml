@@ -22,6 +22,8 @@ cf_db:
   admin_password: ""
   enabled: true
 
+automountServiceAccountToken: false
+
 #! reserved static ip for istio LoadBalancer
 istio_static_ip: ""
 
