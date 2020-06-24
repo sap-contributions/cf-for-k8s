@@ -8,6 +8,7 @@ metadata:
 spec:
   sources:
   - image: "gcr.io/paketo-buildpacks/builder@sha256:d89cb0170bb37b1905d008cab8845b5442a773afdc89d964ace8acd5561439c9"
+  - image: "relintdockerhubpushbot/ruby-builder@sha256:db89645046861699c2327711b9ab9522eb2bde87ec8fb57a3b34a4ef000ff72f"
 
 ---
 apiVersion: experimental.kpack.pivotal.io/v1alpha1
@@ -33,6 +34,8 @@ spec:
   stack: cflinuxfs3-stack
   store: cf-buildpack-store
   order:
+  - group:
+    - id: paketo-community/ruby
   - group:
     - id: paketo-buildpacks/java
   - group:

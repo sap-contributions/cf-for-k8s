@@ -1,0 +1,12 @@
+[[buildpacks]]
+image = "gcr.io/paketo-community/ruby:0.0.11"
+
+[[order]]
+    [[order.group]]
+    id = "paketo-community/ruby"
+    version = "0.0.11"
+
+[stack]
+id = "org.cloudfoundry.stacks.cflinuxfs3"
+build-image = "gcr.io/paketo-buildpacks/build:full-cnb-cf"
+run-image = "gcr.io/paketo-buildpacks/run:full-cnb-cf"
